@@ -6,6 +6,12 @@ const passport = require("passport");
 const passportInit = require("./passport/passportInit");
 const exerciseRouter = require("./routes/exercises");
 
+//security pacakages
+const helmet = require("helmet");
+const cors = require("cors");
+const xss = require("xss-clean");
+const rateLimiter = require("express-rate-limit");
+
 const auth = require("./middleware/auth");
 
 app.set("view engine", "ejs");
@@ -43,20 +49,26 @@ if (app.get("env") === "production") {
   sessionParms.cookie.secure = true; // serve secure cookies
 }
 
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  }),
+);
+
 app.use(session(sessionParms));
 app.use(require("connect-flash")());
 
-//app.use(csrfMiddleware);
+app.use(csrfMiddleware);
 
 passportInit();
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(require("./middleware/storeLocals"));
+app.use(helmet());
+app.use(cors());
+app.use(xss());
 
-app.use((req, res, next) => {
-  if (req.path.startsWith("/exercises")) return next();
-  csrfMiddleware(req, res, next);
-});
+app.use(require("./middleware/storeLocals"));
 
 app.get("/", (req, res) => {
   res.render("index");
