@@ -1,0 +1,20 @@
+  <h2>Exercises List</h2>
+    <table id="exercises-table">
+      <tr id="exercises-table-header">
+        <th>ExerciseName</th>
+        <th>BodyPart</th>
+        <th>PersonalBestStatus</th>
+        <th colspan="2"></th>
+      </tr>
+      <% if (jobs && jobs.length) { %>
+        <% jobs.forEach((job) => { %>
+          <tr>
+            <td><%= job.company %></td>
+            <td><%= job.position %></td>
+            <td><%= job.status %></td>
+            <td><button type="button">edit</button></td>
+            <td>button type="button">delete</button></td>
+          </tr>
+        <% }) %>
+      <% } %>
+    </table>

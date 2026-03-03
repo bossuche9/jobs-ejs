@@ -1,15 +1,21 @@
-const express = require("express");
+require("dotenv").config(); // to load the .env file into the process.env object
 require("express-async-errors");
-
+const express = require("express");
 const app = express();
-
 const passport = require("passport");
 const passportInit = require("./passport/passportInit");
+const exerciseRouter = require("./routes/exercises");
+
+const auth = require("./middleware/auth");
 
 app.set("view engine", "ejs");
 app.use(require("body-parser").urlencoded({ extended: true }));
 
-require("dotenv").config(); // to load the .env file into the process.env object
+const cookieParser = require("cookie-parser");
+const csrf = require("host-csrf");
+app.use(cookieParser(process.env.SESSION_SECRET));
+const csrfMiddleware = csrf.csrf();
+
 const session = require("express-session");
 
 const MongoDBStore = require("connect-mongodb-session")(session);
@@ -29,7 +35,7 @@ const sessionParms = {
   resave: true,
   saveUninitialized: true,
   store: store,
-  cookie: { secure: false, sameSite: "strict" },
+  cookie: { secure: false, sameSite: "lax" },
 };
 
 if (app.get("env") === "production") {
@@ -39,10 +45,19 @@ if (app.get("env") === "production") {
 
 app.use(session(sessionParms));
 app.use(require("connect-flash")());
+
+//app.use(csrfMiddleware);
+
 passportInit();
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(require("./middleware/storeLocals"));
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/exercises")) return next();
+  csrfMiddleware(req, res, next);
+});
+
 app.get("/", (req, res) => {
   res.render("index");
 });
@@ -51,8 +66,9 @@ app.use("/sessions", require("./routes/sessionRoutes"));
 // secret word handling
 // let secretWord = "syzygy";
 const secretWordRouter = require("./routes/secretWord");
-const auth = require("./middleware/auth");
+
 app.use("/secretWord", auth, secretWordRouter);
+app.use("/exercises", auth, exerciseRouter);
 
 app.use((req, res) => {
   res.status(404).send(`That page (${req.url}) was not found.`);
